@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TENFLIX - ULTIMATE ADMIN COMMAND</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root { --n-red: #E50914; --bg: #0b0b0b; --panel: #181818; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar */
+        .sidebar { width: 260px; background: #000; border-right: 1px solid #222; display: flex; flex-direction: column; padding: 20px 0; }
+        .logo { font-size: 26px; font-weight: bold; color: var(--n-red); text-align: center; margin-bottom: 30px; text-shadow: 0 0 10px rgba(229,9,20,0.4); }
+        .nav-item { padding: 15px 25px; color: #888; cursor: pointer; border-left: 4px solid transparent; transition: 0.3s; font-weight: 500; }
+        .nav-item:hover, .nav-item.active { background: #111; color: white; border-left-color: var(--n-red); }
+
+        /* Main Area */
+        .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; }
+        .panel-box { background: var(--panel); padding: 30px; border-radius: 12px; border: 1px solid #333; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        /* Inputs & Buttons */
+        .input-dark { width: 100%; padding: 14px; margin-bottom: 15px; background: #252525; border: 1px solid #444; color: white; border-radius: 8px; box-sizing: border-box; outline: none; }
+        .input-dark:focus { border-color: var(--n-red); }
+        .btn { width: 100%; padding: 14px; border: none; color: white; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-red { background: var(--n-red); }
+        .btn-green { background: #1db954; }
+        .btn-orange { background: #ff9800; color: #000; }
+        
+        /* Tabs */
+        .tab-section { display: none; }
+        .tab-active { display: block; animation: fadeInUp 0.4s ease; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* DB Grid */
+        .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
+        .item-card { background: #222; padding: 10px; border-radius: 10px; text-align: center; position: relative; border: 1px solid #333; }
+        .item-card img { width: 100%; height: 220px; object-fit: cover; border-radius: 6px; }
+        .badge { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.8); color: var(--n-red); padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: bold; border: 1px solid var(--n-red); }
+        .del-x { position: absolute; top: 15px; right: 15px; background: red; color: white; border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer; font-weight: bold; }
+
+        /* Auth */
+        #auth-screen { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; justify-content: center; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div style="background:#111; padding:40px; border-radius:15px; width:320px; text-align:center; border:1px solid #333;">
+            <h1 style="color:var(--n-red);">ADMIN LOGIN</h1>
+            <input type="email" id="adm-email" class="input-dark" placeholder="Email">
+            <input type="password" id="adm-pass" class="input-dark" placeholder="Password">
+            <button class="btn btn-red" onclick="login()">ENTER COMMAND CENTER</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="logo">TENFLIX</div>
+        <div class="nav-item active" onclick="switchTab('tab-video', this)">🎬 Movies / Series</div>
+        <div class="nav-item" onclick="switchTab('tab-music', this)">🎵 Music Magic</div>
+        <div class="nav-item" onclick="switchTab('tab-manage', this)">📂 Manage All</div>
+        <div class="nav-item" onclick="switchTab('tab-nuke', this)">☢️ Nuclear Tools</div>
+        <div style="flex-grow:1;"></div>
+        <div class="nav-item" onclick="auth.signOut()" style="color:#ff4444;">🚪 Logout</div>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="tab-video" class="tab-section tab-active">
+            <h2>🎬 Video Content Manager</h2>
+            <div class="panel-box">
+                <div style="display:flex; gap:10px;">
+                    <select id="vid-type" class="input-dark" style="width:30%;" onchange="toggleVidMode()">
+                        <option value="movie">Movie</option>
+                        <option value="series">Series / Anime</option>
+                    </select>
+                    <input type="text" id="vid-search" class="input-dark" style="width:70%;" placeholder="Search title...">
+                </div>
+                <button class="btn btn-orange" onclick="magicVideo()">✨ Magic Video Auto-Fill</button>
+                <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
+                
+                <input type="text" id="vid-final-title" class="input-dark" placeholder="Final Title">
+                <input type="text" id="vid-img" class="input-dark" placeholder="Poster Image URL">
+                <select id="vid-label" class="input-dark">
+                    <option value="Movie">Label: Movie</option>
+                    <option value="Series">Label: Series</option>
+                    <option value="Anime">Label: Anime</option>
+                    <option value="KDrama">Label: K-Drama</option>
+                </select>
+
+                <div id="single-box">
+                    <input type="text" id="vid-link" class="input-dark" placeholder="Video Embed Link">
+                    <button class="btn btn-red" onclick="postVideo()">Post Movie</button>
+                </div>
+
+                <div id="series-box" style="display:none; background:#222; padding:20px; border-radius:10px;">
+                    <h3 style="margin-top:0; color:#1db954;">Bulk Season Uploader</h3>
+                    <input type="number" id="vid-season" class="input-dark" placeholder="Season Number" value="1">
+                    <button class="btn btn-green" onclick="bulkVideo()">🚀 Bulk Post Season</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-music" class="tab-section">
+            <h2>🎵 Music Magic Manager</h2>
+            <div class="panel-box">
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="mu-search" class="input-dark" placeholder="Song or Artist Name...">
+                    <button class="btn btn-orange" style="width:30%;" onclick="magicMusic()">✨ Magic Music Search</button>
+                </div>
+                <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
+                <input type="text" id="mu-title" class="input-dark" placeholder="Song Title">
+                <input type="text" id="mu-artist" class="input-dark" placeholder="Artist">
+                <input type="text" id="mu-img" class="input-dark" placeholder="Cover Art URL">
+                <input type="text" id="mu-link" class="input-dark" placeholder="Direct MP3 Link (Discord/Dropbox)">
+                <button class="btn btn-green" onclick="postMusic()">Upload to Tenflix Music</button>
+            </div>
+        </div>
+
+        <div id="tab-manage" class="tab-section">
+            <h2>📂 Manage Database</h2>
+            <div class="panel-box">
+                <input type="text" id="db-filter" class="input-dark" placeholder="Search items..." onkeyup="filterDB()">
+                <div id="db-grid" class="grid-list"></div>
+            </div>
+        </div>
+
+        <div id="tab-nuke" class="tab-section">
+            <h2 style="color:red;">☢️ Nuclear Strike</h2>
+            <div class="panel-box" style="border-color:red;">
+                <p>Buburahin lahat ng episodes na may kaparehong title. Ingat, tol!</p>
+                <input type="text" id="nuke-query" class="input-dark" placeholder="Ex: Solo Leveling">
+                <button class="btn btn-red" style="background:darkred;" onclick="nuke()">🔥 EXECUTE NUCLEAR DELETE</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCKuzGOLXVZWBtr94yZRN5MGb25Y8E3nqA", 
+            authDomain: "tenflixapp-a2e10.firebaseapp.com", 
+            databaseURL: "https://tenflixapp-a2e10-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "tenflixapp-a2e10", 
+            storageBucket: "tenflixapp-a2e10.appspot.com",
+            appId: "1:203297041422:web:04a89753898324a900a05f" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        const TMDB_API = "87e915868818384adab881904faf148a";
+
+        auth.onAuthStateChanged(user => {
+            if(user && user.email === "keventv415@gmail.com") {
+                document.getElementById('auth-screen').style.display = 'none';
+                loadItems();
+            } else if (user) { auth.signOut(); }
+        });
+
+        function login() {
+            auth.signInWithEmailAndPassword(document.getElementById('adm-email').value, document.getElementById('adm-pass').value).catch(e => alert(e.message));
+        }
+
+        function switchTab(id, el) {
+            document.querySelectorAll('.tab-section').forEach(t => t.classList.remove('tab-active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(id).classList.add('tab-active');
+            el.classList.add('active');
+        }
+
+        function toggleVidMode() {
+            const isSeries = document.getElementById('vid-type').value === 'series';
+            document.getElementById('single-box').style.display = isSeries ? 'none' : 'block';
+            document.getElementById('series-box').style.display = isSeries ? 'block' : 'none';
+        }
+
+        // --- VIDEO LOGIC ---
+        async function magicVideo() {
+            const q = document.getElementById('vid-search').value;
+            const type = document.getElementById('vid-type').value === 'series' ? 'tv' : 'movie';
+            const res = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${TMDB_API}&query=${q}`);
+            const data = await res.json();
+            if(data.results[0]) {
+                const item = data.results[0];
+                document.getElementById('vid-final-title').value = item.name || item.title;
+                document.getElementById('vid-img').value = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+                alert("✨ Magic Video Loaded!");
+            }
+        }
+
+        function postVideo() {
+            const title = document.getElementById('vid-final-title').value;
+            const img = document.getElementById('vid-img').value;
+            const link = document.getElementById('vid-link').value;
+            const cat = document.getElementById('vid-label').value;
+            db.ref('content/movies').push({ title, img, link, category: cat, views: 0 }).then(() => alert("Posted!"));
+        }
+
+        async function bulkVideo() {
+            const title = document.getElementById('vid-final-title').value;
+            const season = document.getElementById('vid-season').value;
+            const poster = document.getElementById('vid-img').value;
+            const cat = document.getElementById('vid-label').value;
+            
+            const search = await (await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API}&query=${title}`)).json();
+            const series = search.results[0];
+            const seasonData = await (await fetch(`https://api.themoviedb.org/3/tv/${series.id}/season/${season}?api_key=${TMDB_API}`)).json();
+            
+            for(let ep of seasonData.episodes) {
+                await db.ref('content/movies').push({
+                    title: `${series.name} - S${season} E${ep.episode_number}`,
+                    img: poster,
+                    link: `https://vidsrc.me/embed/tv?tmdb=${series.id}&season=${season}&episode=${ep.episode_number}`,
+                    category: cat, views: 0
+                });
+            }
+            alert("Bulk Post Success!");
+        }
+
+        // --- MUSIC LOGIC ---
+        async function magicMusic() {
+            const q = document.getElementById('mu-search').value;
+            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&limit=1&entity=song`);
+            const data = await res.json();
+            if(data.results[0]) {
+                const s = data.results[0];
+                document.getElementById('mu-title').value = s.trackName;
+                document.getElementById('mu-artist').value = s.artistName;
+                document.getElementById('mu-img').value = s.artworkUrl100.replace('100x100bb', '600x600bb');
+                alert("✨ Magic Music Loaded!");
+            }
+        }
+
+        function postMusic() {
+            const title = document.getElementById('mu-title').value;
+            const artist = document.getElementById('mu-artist').value;
+            const img = document.getElementById('mu-img').value;
+            const link = document.getElementById('mu-link').value;
+            db.ref('content/music').push({ title, artist, img, link }).then(() => alert("Music Uploaded!"));
+        }
+
+        // --- MANAGE ---
+        function loadItems() {
+            db.ref('content/movies').on('value', s => {
+                const data = s.val();
+                const grid = document.getElementById('db-grid');
+                grid.innerHTML = "";
+                if(!data) return;
+                Object.keys(data).reverse().forEach(k => {
+                    grid.innerHTML += `
+                    <div class="item-card" data-t="${data[k].title.toLowerCase()}">
+                        <div class="badge">${data[k].category || 'Movie'}</div>
+                        <button class="del-x" onclick="delItem('movies','${k}')">✕</button>
+                        <img src="${data[k].img}">
+                        <p style="font-size:11px; margin-top:5px;">${data[k].title}</p>
+                    </div>`;
+                });
+            });
+        }
+
+        function delItem(path, key) { if(confirm("Delete?")) db.ref(`content/${path}/${key}`).remove(); }
+
+        function filterDB() {
+            const q = document.getElementById('db-filter').value.toLowerCase();
+            document.querySelectorAll('.item-card').forEach(c => {
+                c.style.display = c.getAttribute('data-t').includes(q) ? 'block' : 'none';
+            });
+        }
+
+        async function nuke() {
+            const q = document.getElementById('nuke-query').value.toLowerCase().trim();
+            if(!q) return;
+            const snap = await db.ref('content/movies').once('value');
+            const data = snap.val();
+            let updates = {};
+            Object.keys(data).forEach(k => { if(data[k].title.toLowerCase().includes(q)) updates[k] = null; });
+            await db.ref('content/movies').update(updates);
+            alert("Nuked!");
+        }
+    </script>
+</body>
+</html>
